@@ -7,9 +7,9 @@ using WebApiAutores.Entidades;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
-namespace WebApiAutores.Controllers
+namespace WebApiAutores.Controllers.V1
 {
-    [Route("api/libros")]
+    [Route("api/v1/libros")]
     [ApiController]
     public class LibrosController : ControllerBase
     {
@@ -17,16 +17,16 @@ namespace WebApiAutores.Controllers
 
         public IMapper Mapper { get; }
 
-        public LibrosController(ApplicationDbContext context,IMapper mapper)
+        public LibrosController(ApplicationDbContext context, IMapper mapper)
         {
             this.context = context;
             Mapper = mapper;
         }
         // GET: api/<LibrosController>
-        [HttpGet("{id:int}",Name ="obtenerLibro")]
+        [HttpGet("{id:int}", Name = "obtenerLibro")]
         public async Task<ActionResult<LibroDTOConAutores>> Get(int id)
         {
-            var libro = await context.Libros.Include(x=>x.AutoresLibros).ThenInclude(x=>x.Autor).FirstOrDefaultAsync(x => x.Id == id);
+            var libro = await context.Libros.Include(x => x.AutoresLibros).ThenInclude(x => x.Autor).FirstOrDefaultAsync(x => x.Id == id);
             if (libro == null)
             {
                 return NotFound();
@@ -34,21 +34,21 @@ namespace WebApiAutores.Controllers
             libro.AutoresLibros = libro.AutoresLibros.OrderBy(x => x.Orden).ToList();
             return Mapper.Map<LibroDTOConAutores>(libro);
         }
-        [HttpGet]
+        [HttpGet(Name = "obtenerLibros")]
         public async Task<List<LibroDTO>> Get()
         {
-            return Mapper.Map<List<LibroDTO>>(await context.Libros.Include(x => x.AutoresLibros).ThenInclude(x => x.Autor).Include(x=>x.Comentarios).ToListAsync());
+            return Mapper.Map<List<LibroDTO>>(await context.Libros.ToListAsync());
         }
 
-        
-        [HttpPost]
+
+        [HttpPost(Name = "crearLibro")]
         public async Task<ActionResult> Post(LibroCreacionDTO libro)
         {
             if (libro.AutoresIds == null)
             {
                 return BadRequest("No se puede crear un libro sin autores");
             }
-            var autoresIds = await context.Autores.Where(x => libro.AutoresIds.Contains(x.Id)).Select(x=>x.Id).ToListAsync();
+            var autoresIds = await context.Autores.Where(x => libro.AutoresIds.Contains(x.Id)).Select(x => x.Id).ToListAsync();
             if (libro.AutoresIds.Count != autoresIds.Count)
             {
                 return BadRequest("Algunos autores no existen");
@@ -57,15 +57,15 @@ namespace WebApiAutores.Controllers
             AsignarOrdenAutores(nuevoLibro);
             context.Add(nuevoLibro);
             await context.SaveChangesAsync();
-            var libroDTO=Mapper.Map<LibroDTO>(libro);
-            return CreatedAtRoute("obtenerLibro", new { id = nuevoLibro.Id,},libroDTO);
+            var libroDTO = Mapper.Map<LibroDTO>(libro);
+            return CreatedAtRoute("obtenerLibro", new { id = nuevoLibro.Id, }, libroDTO);
         }
 
         // PUT api/<LibrosController>/5
-        [HttpPut("{id:int}")]
+        [HttpPut("{id:int}", Name = "actualizarLibro")]
         public async Task<ActionResult> Put(int id, LibroCreacionDTO libroCreacion)
         {
-            var libroDB = await context.Libros.Include(x=>x.AutoresLibros).FirstOrDefaultAsync(x => x.Id == id);
+            var libroDB = await context.Libros.Include(x => x.AutoresLibros).FirstOrDefaultAsync(x => x.Id == id);
             if (libroDB == null)
             {
                 return NotFound();
@@ -75,8 +75,8 @@ namespace WebApiAutores.Controllers
             await context.SaveChangesAsync();
             return NoContent();
         }
-        [HttpPatch("{id:int}")]
-        public async Task<ActionResult> Patch(int id,JsonPatchDocument<LibroPatchDTO> patchDocument)
+        [HttpPatch("{id:int}", Name = "patchLibro")]
+        public async Task<ActionResult> Patch(int id, JsonPatchDocument<LibroPatchDTO> patchDocument)
         {
             if (patchDocument == null)
             {
@@ -95,13 +95,13 @@ namespace WebApiAutores.Controllers
             {
                 return BadRequest(ModelState);
             }
-            
+
             await context.SaveChangesAsync();
             return NoContent();
 
         }
         // DELETE api/<LibrosController>/5
-        [HttpDelete("{id:int}")]
+        [HttpDelete("{id:int}", Name = "borrarLibro")]
         public async Task<ActionResult> Delete(int id)
         {
             var existe = await context.Libros.AnyAsync(a => a.Id == id);
